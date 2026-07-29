@@ -1,34 +1,33 @@
 # Credit Default Risk Prediction
 
-Predicting probability of serious delinquency within 2 years, using the Kaggle ["Give Me Some Credit"](https://www.kaggle.com/c/GiveMeSomeCredit) dataset (150,000 borrowers, ~6.7% default rate).
+Predicting probability of serious delinquency within 2 years using 2 different models (Logistic Regression and XGBOOST), using the Kaggle ["Give Me Some Credit"](https://www.kaggle.com/c/GiveMeSomeCredit) dataset (150,000 borrowers, ~6.7% default rate).
 
 ## Results
 
 | Model | AUC |
 |---|---|
-| Logistic regression (raw) | 0.714 |
-| Logistic regression (capped utilization outlier) | 0.811 |
-| Logistic regression (+ DebtRatio/income-missing fix) | 0.812 |
-| Logistic regression (+ late-payment sentinel-value fix) | **0.856** |
-| XGBoost (raw, default hyperparameters) | **0.860** |
-
-## What this project actually shows
-
-The headline result isn't "XGBoost beats logistic regression" — it's that **most of that gap was fixable data quality issues, not an inherent limitation of the linear model**:
-
-- `RevolvingUtilizationOfUnsecuredLines` had extreme outliers (max 50,708 on a ratio that should top out near 1) distorting `StandardScaler`'s mean/std. Capping at the train-derived 99th percentile alone closed most of the gap to XGBoost.
-- `DebtRatio`'s extreme values (max 329,664) turned out to correlate 92.6% with missing `MonthlyIncome` — strong evidence the raw debt amount was stored in place of a ratio whenever income was unreported.
-- The three late-payment count columns showed suspicious 0.98–0.99 pairwise correlation, traced to 214 rows sharing an identical fabricated sentinel value (98, or 96) across all three columns simultaneously. This artificial correlation caused a multicollinearity-driven sign flip (a negative coefficient on `NumberOfTime60-89DaysPastDueNotWorse`, which should intuitively be risk-*increasing*). Fixing it resolved the sign flip and closed nearly all of the remaining AUC gap.
+| Logistic regression (DebtRatio/income and capped utilization fix) | 0.812 |
+| Logistic regression (+ late-payment sentinel fix) | **0.854** |
+| Logistic regression (all fixes + Cross-Validation) | **0.849** |
+| XGBoost (after same fixes) | **0.859** |
+| XGBoost (+ Cross-Validation) | **0.859** |
+| XGBoost (+ Hyperparamter tuning) | **0.865** |
 
 ## Methodology
 
-1. Explored missingness and class imbalance; ruled out accuracy as an evaluation metric given the ~93/7 class split.
-2. Stratified train/validation split from `cs-training.csv` (Kaggle's `cs-test.csv` has no usable labels for this competition).
-3. Built a `SimpleImputer` → `StandardScaler` → `LogisticRegression` baseline, and an `XGBClassifier` baseline.
-4. Diagnosed and root-cause-fixed the three data quality issues above.
-5. Wrapped the full cleaning → impute → scale → model sequence into a single `sklearn.Pipeline` with a custom `CreditDataCleaner` transformer.
-6. Explored F1-maximizing and cost-based threshold selection (the latter explicitly weighting a missed default more heavily than a false alarm — since the dataset has no loan amount/LGD data, this is illustrative of the *methodology* real credit decisioning uses, not a deployable dollar-optimal cutoff).
-7. Cross-validated the final pipeline (`StratifiedKFold`, 5 folds) and ran randomized hyperparameter search on XGBoost.
+1. Explored missingness (`MonthlyIncome`: 19.8%, `NumberOfDependents`: 2.6%) and confirmed severe class imbalance, ruling out accuracy as an evaluation metric.
+2. Split off a stratified validation set from `cs-training.csv` (Kaggle's `cs-test.csv` has no usable labels — confirmed early on).
+3. Realised that:
+   - `RevolvingUtilizationOfUnsecuredLines` had extreme outliers (max 50,708) --> Cap at the train-derived 99th percentile.
+   - `DebtRatio`'s extreme values (max 329,664) were shown to correlate almost perfectly (92.6%) with missing `MonthlyIncome` — strong evidence the raw debt            amount was stored in place of a ratio when income was unreported. Fixing this added a `MonthlyIncome_was_missing` flag and recovered a per-row ratio estimate.
+4. Built a `SimpleImputer` (median) → `StandardScaler` → `LogisticRegression` --> obtained **AUC = 0.812**.
+5. Built an `XGBClassifier` baseline (median-imputed only, no scaling needed): **AUC = 0.859** — slightly over logistic regression, consistent with XGBoost's         ability to capture non-linear feature interactions.
+5. Investigated *why* there is a gap, rather than accepting it:
+   - The three late-payment count columns showed suspiciously high pairwise correlation (0.98–0.99), traced to 214 rows sharing an identical sentinel value (98 or      96) across all three columns — a data-encoding artifact, not real payment history. Flagging and nulling these rows fixed both a counterintuitive negative          coefficient (multicollinearity-driven sign flip) and pushed logistic regression to **AUC = 0.854** — nearly matching XGBoost's 0.859 through data cleaning         alone, no hyperparameter tuning.
+6. Wrapped the full cleaning → impute → scale → model sequence into a single `sklearn.Pipeline` with a custom `CreditDataCleaner` transformer, enforcing the fit-     on-train-only discipline structurally rather than manually.
+7. Explored threshold selection beyond the default 0.5: F1-maximizing threshold (found by direct search over `precision_recall_curve`, since precision/recall are     step functions of a finite sample — not differentiable), and a cost-based threshold that explicitly weights missing a defaulter more heavily than a false alarm    (assumed 5:1 ratio, since the dataset lacks loan amount/LGD data needed for a real cost figure).
+8. Used Cross-Validation to find average AUCs for XGB and L.R
+9. Did Hyperparamter tuning on xgb to improve AUC score
 
 ## Honest scope / limitations
 
