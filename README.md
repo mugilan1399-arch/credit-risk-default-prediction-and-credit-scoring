@@ -1,6 +1,10 @@
-# Credit Default Risk Prediction
+# Credit Default Risk Prediction + Credit Scoring
 
-Predicting probability of serious delinquency within 2 years using 2 different models (Logistic Regression and XGBOOST), using the Kaggle ["Give Me Some Credit"](https://www.kaggle.com/c/GiveMeSomeCredit) dataset (150,000 borrowers, ~6.7% default rate).
+**Part 1: Credit Default Prediction Model**
+   - Predicting probability of serious delinquency within 2 years using 2 different models (Logistic Regression and XGBOOST), using the Kaggle ["Give Me Some           Credit"](https://www.kaggle.com/c/GiveMeSomeCredit) dataset (150,000 borrowers, ~6.7% default rate).
+
+**Part 2: Segmentation and Credit Scoring (Logistic Regression)**
+   - Bucket borrowers into risk tiers (A–E) using the *already-trained* logistic regression pipeline, then validate, explain, and translate those tiers into            something a lender could actually act on.
 
 ## Results
 
@@ -15,6 +19,7 @@ Predicting probability of serious delinquency within 2 years using 2 different m
 
 ## Methodology
 
+**Part 1**
 1. Explored missingness (`MonthlyIncome`: 19.8%, `NumberOfDependents`: 2.6%) and confirmed severe class imbalance, ruling out accuracy as an evaluation metric.
 2. Split off a stratified validation set from `cs-training.csv` (Kaggle's `cs-test.csv` has no usable labels — confirmed early on).
 3. Realised that:
@@ -29,9 +34,24 @@ Predicting probability of serious delinquency within 2 years using 2 different m
 8. Used Cross-Validation to find average AUCs for XGB and L.R
 9. Did Hyperparamter tuning on xgb to improve AUC score
 
+**Part 2**
+1. Examined model's predicted probability distribution before bucketing, heavily right-skewed (median ≈2.7%, 99th percentile ≈6.7%), then split into 5 equal-count    percentile tiers via `pd.qcut`.
+2. Validated the tiers against true outcomes: actual default rate increases monotonically A→E, and each tier's actual rate tracks its predicted mean probability      closely, confirming the tiers reflect real risk separation.
+3. Explained tier placement using decomposition of the logit into additive feature contributions for each borrower, then used high-beta features to directly          compare between tiers A, C and E --> showed consistent trends. 
+4. Built a points-based scorecard:
+   - For Logistic Regression, `Score = Offset − Factor × logit` is used which preserves additivity across features (probability itself doesn't decompose                additively).
+   - Used illustrative values (base score 600 at 50:1 good:bad odds, 20 points to double the odds) --> does not reflect real data.
+   - Built the points table by binning each feature and averaging bin-level contributions, then caught and fixed a real defect: the zero-inflated late-payment          columns (~90% zero) caused `qcut`'s percentiles to collapse onto one bin --> fixed with fixed cutoffs (0/1/2/3+) instead of percentiles.
+   - Found a second defect: rare extreme outliers (e.g. a borrower earning $1.56M/month) get diluted toward their bin's average, a tradeoff of any binned               scorecard, not something more bins can fix.
+   - Added a review flag (reconstruction error > one PDO cycle) to manually isolate borrowers the table misrepresents instead of trusting blindly — 1.16% of            borrowers flagged, concentrated in tier E.
+
 ## Honest scope / limitations
 
-This produces a **PD (probability of default) model only**. A real credit decision requires $EL = PD \times LGD \times EAD$, and this dataset has no loan amount or loss-given-default data — the threshold/cost analysis here demonstrates the methodology, not a deployable cutoff.
+**Part 1**:
+   - This produces a **PD (probability of default) model only**. A real credit decision requires $EL = PD \times LGD \times EAD$, and this dataset has no loan          amount   or loss-given-default data — the threshold/cost analysis here demonstrates the methodology, not a deployable cutoff.
+
+**Part 2**:
+   - It scores and tiers borrowers only, the decision-making process is not illustrated here because it differs between lenders.
 
 ## Setup
 
@@ -41,4 +61,4 @@ pip install -r requirements.txt
 
 Download `cs-training.csv` and `cs-test.csv` from the [Kaggle competition page](https://www.kaggle.com/c/GiveMeSomeCredit/data) and place them in `data/`.
 
-Then open `credit_risk_model.ipynb`.
+Then open `credit_default_risk_prediction.ipynb`.
