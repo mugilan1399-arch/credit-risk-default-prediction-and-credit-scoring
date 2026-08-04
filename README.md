@@ -1,9 +1,9 @@
 # Credit Default Risk Prediction + Credit Scoring
 
-# Part 1: Credit Default Prediction Model
+**Part 1: Credit Default Prediction Model**
 Predicting probability of serious delinquency within 2 years using 2 different models (Logistic Regression and XGBOOST), using the Kaggle ["Give Me Some Credit"](https://www.kaggle.com/c/GiveMeSomeCredit) dataset (150,000 borrowers, ~6.7% default rate).
 
-# Part 2: Segmentation and Credit Scoring (Logistic Regression)
+**Part 2: Segmentation and Credit Scoring (Logistic Regression)**
 Bucket borrowers into risk tiers (A–E) using the *already-trained* logistic regression pipeline, then validate, explain, and translate those tiers into something a lender could actually act on.
 
 ## Results
@@ -19,7 +19,7 @@ Bucket borrowers into risk tiers (A–E) using the *already-trained* logistic re
 
 ## Methodology
 
-# Part 1
+**Part 1**
 1. Explored missingness (`MonthlyIncome`: 19.8%, `NumberOfDependents`: 2.6%) and confirmed severe class imbalance, ruling out accuracy as an evaluation metric.
 2. Split off a stratified validation set from `cs-training.csv` (Kaggle's `cs-test.csv` has no usable labels — confirmed early on).
 3. Realised that:
@@ -34,7 +34,7 @@ Bucket borrowers into risk tiers (A–E) using the *already-trained* logistic re
 8. Used Cross-Validation to find average AUCs for XGB and L.R
 9. Did Hyperparamter tuning on xgb to improve AUC score
 
-# Part 2
+**Part 2**
 1. Examined model's predicted probability distribution before bucketing, heavily right-skewed (median ≈2.7%, 99th percentile ≈6.7%), then split into 5 equal-count    percentile tiers via `pd.qcut`.
 2. Validated the tiers against true outcomes: actual default rate increases monotonically A→E, and each tier's actual rate tracks its predicted mean probability      closely, confirming the tiers reflect real risk separation.
 3. Explained tier placement using decomposition of the logit into additive feature contributions for each borrower, then used high-beta features to directly          compare between tiers A, C and E --> showed consistent trends. 
@@ -47,10 +47,10 @@ Bucket borrowers into risk tiers (A–E) using the *already-trained* logistic re
 
 ## Honest scope / limitations
 
-# Part 1
+**Part 1**
 This produces a **PD (probability of default) model only**. A real credit decision requires $EL = PD \times LGD \times EAD$, and this dataset has no loan amount or loss-given-default data — the threshold/cost analysis here demonstrates the methodology, not a deployable cutoff.
 
-# Part 2
+**Part 2**
 It scores and tiers borrowers only, the decision-making process is not illustrated here because it differs between lenders.
 
 ## Setup
