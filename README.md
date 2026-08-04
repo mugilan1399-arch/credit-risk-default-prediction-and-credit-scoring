@@ -1,9 +1,11 @@
 # Credit Default Risk Prediction + Credit Scoring
 
-**Part 1: Credit Default Prediction Model**
+**Part 1: Credit Default Prediction Model**:
+
 Predicting probability of serious delinquency within 2 years using 2 different models (Logistic Regression and XGBOOST), using the Kaggle ["Give Me Some Credit"](https://www.kaggle.com/c/GiveMeSomeCredit) dataset (150,000 borrowers, ~6.7% default rate).
 
-**Part 2: Segmentation and Credit Scoring (Logistic Regression)**
+**Part 2: Segmentation and Credit Scoring (Logistic Regression)**:
+
 Bucket borrowers into risk tiers (A–E) using the *already-trained* logistic regression pipeline, then validate, explain, and translate those tiers into something a lender could actually act on.
 
 ## Results
@@ -47,10 +49,12 @@ Bucket borrowers into risk tiers (A–E) using the *already-trained* logistic re
 
 ## Honest scope / limitations
 
-**Part 1**
+**Part 1**:
+
 This produces a **PD (probability of default) model only**. A real credit decision requires $EL = PD \times LGD \times EAD$, and this dataset has no loan amount or loss-given-default data — the threshold/cost analysis here demonstrates the methodology, not a deployable cutoff.
 
-**Part 2**
+**Part 2**:
+
 It scores and tiers borrowers only, the decision-making process is not illustrated here because it differs between lenders.
 
 ## Setup
