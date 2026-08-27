@@ -1,4 +1,4 @@
-# Credit Default Risk Prediction + Credit Scoring
+# Credit Default Risk Prediction + Credit Scoring + Basel IRB Risk-Weight formula
 
 **Part 1: Credit Default Prediction Model**
    - Predicting probability of serious delinquency within 2 years using 2 different models (Logistic Regression and XGBOOST), using the Kaggle ["Give Me Some           Credit"](https://www.kaggle.com/c/GiveMeSomeCredit) dataset (150,000 borrowers, ~6.7% default rate).
