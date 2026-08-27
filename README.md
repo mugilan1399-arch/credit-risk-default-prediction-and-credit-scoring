@@ -74,4 +74,4 @@ pip install -r requirements.txt
 
 Download `cs-training.csv` and `cs-test.csv` from the [Kaggle competition page](https://www.kaggle.com/c/GiveMeSomeCredit/data) and place them in `data/`.
 
-Then open `credit_default_risk_prediction_+_credit_scoring.ipynb`.
+Then open `credit_default_risk_prediction_+_credit_scoring_+_basel.ipynb`.
