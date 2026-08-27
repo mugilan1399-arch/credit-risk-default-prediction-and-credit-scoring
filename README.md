@@ -62,9 +62,9 @@
    - It scores and tiers borrowers only, the decision-making process is not illustrated here because it differs between lenders.
 
 **Part 3**:
-     1. **The rows are borrowers, not loans.** IRB assigns capital per *loan*; a row here is a *borrower*. A borrower can requests for different loans at once -->         leading to different sub-classes, different correlations, different LGDs. The row-to-curve mapping is structurally undefined.
-     2. **The PD is not a Basel PD.** `SeriousDlqin2yrs` is a 90+ DPD flag over **2 years**; IRB consumes a **1-year long-run-average** default rate for at least          **5 years**. (CRE 36.81, 36.82)
-     3. **No LGD and EAD.** The LGDs below correspond to regulatory input floors; EAD is expressed per unit of credit limit, no actual currency.
+   - 1. **The rows are borrowers, not loans.** IRB assigns capital per *loan*; a row here is a *borrower*. A borrower can requests for different loans at once -->         leading to different sub-classes, different correlations, different LGDs. The row-to-curve mapping is structurally undefined.
+   - 2. **The PD is not a Basel PD.** `SeriousDlqin2yrs` is a 90+ DPD flag over **2 years**; IRB consumes a **1-year long-run-average** default rate for at least          **5 years**. (CRE 36.81, 36.82)
+   - 3. **No LGD and EAD.** The LGDs below correspond to regulatory input floors; EAD is expressed per unit of credit limit, no actual currency.
 
 ## Setup
 
