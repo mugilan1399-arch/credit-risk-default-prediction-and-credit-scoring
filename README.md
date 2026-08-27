@@ -6,6 +6,9 @@
 **Part 2: Segmentation and Credit Scoring (Logistic Regression)**
    - Bucket borrowers into risk tiers (A–E) using the *already-trained* logistic regression pipeline, then validate, explain, and translate those tiers into            something a lender could actually act on.
 
+**Part 3: Regulatory Capital (Basel IRB risk-weight function)**
+   - Feed the PD from Part 1 into the Basel IRB risk-weight function to obtain a capital number, and use that capital number and RAROC formula to derive an             approve/decline cutoff.
+
 ## Results
 
 | Model | AUC |
@@ -45,6 +48,11 @@
    - Found a second defect: rare extreme outliers (e.g. a borrower earning $1.56M/month) get diluted toward their bin's average, a tradeoff of any binned               scorecard, not something more bins can fix.
    - Added a review flag (reconstruction error > one PDO cycle) to manually isolate borrowers the table misrepresents instead of trusting blindly — 1.16% of            borrowers flagged, concentrated in tier E.
 
+**Part 3**
+ 1. Defined asset correlations, risk-weight function and stated the PD and LGD input floors.
+ 2. Plotted the 3 curves corresponding to other retail, QRRE and mortgage.
+ 3. Derived the approve/decline cutoff by solving for break-even interest rate and taking maximum of the boxplots.
+   
 ## Honest scope / limitations
 
 **Part 1**:
@@ -52,6 +60,11 @@
 
 **Part 2**:
    - It scores and tiers borrowers only, the decision-making process is not illustrated here because it differs between lenders.
+
+**Part 3**:
+     1. **The rows are borrowers, not loans.** IRB assigns capital per *loan*; a row here is a *borrower*. A borrower can requests for different loans at once -->         leading to different sub-classes, different correlations, different LGDs. The row-to-curve mapping is structurally undefined.
+     2. **The PD is not a Basel PD.** `SeriousDlqin2yrs` is a 90+ DPD flag over **2 years**; IRB consumes a **1-year long-run-average** default rate for at least          **5 years**. (CRE 36.81, 36.82)
+     3. **No LGD and EAD.** The LGDs below correspond to regulatory input floors; EAD is expressed per unit of credit limit, no actual currency.
 
 ## Setup
 
