@@ -1,24 +1,12 @@
-import numpy as np
-from sklearn.base import BaseEstimator, TransformerMixin
+"""Backwards-compatibility shim.
 
-LATE_PAYMENT_COLS = ['NumberOfTime30-59DaysPastDueNotWorse', 'NumberOfTime60-89DaysPastDueNotWorse', 'NumberOfTimes90DaysLate']
+CreditDataCleaner now lives in src/cleaning.py. This module stays because
+logreg_pipeline.joblib was pickled against `pipeline_utils.CreditDataCleaner`,
+and joblib resolves that path on load. Deleting this file would break the saved
+model. New code should import from src.cleaning directly.
+"""
 
+from src.cleaning import CreditDataCleaner  # noqa: F401
+from src.config import LATE_PAYMENT_COLS  # noqa: F401
 
-class CreditDataCleaner(BaseEstimator, TransformerMixin):
-    def fit(self, X, y=None):
-        self.utilization_cap_ = X['RevolvingUtilizationOfUnsecuredLines'].quantile(0.99)
-        self.income_median_ = X['MonthlyIncome'].median()
-        return self
-
-    def transform(self, X):
-        X = X.copy()
-
-        X['RevolvingUtilizationOfUnsecuredLines'] = X['RevolvingUtilizationOfUnsecuredLines'].clip(upper=self.utilization_cap_)
-
-        income_missing = X['MonthlyIncome'].isnull()
-        X.loc[income_missing, 'DebtRatio'] = X.loc[income_missing, 'DebtRatio'] / self.income_median_
-
-        sentinel_mask = (X[LATE_PAYMENT_COLS] >= 96).any(axis=1)
-        X.loc[sentinel_mask, LATE_PAYMENT_COLS] = np.nan
-
-        return X
+__all__ = ["CreditDataCleaner", "LATE_PAYMENT_COLS"]

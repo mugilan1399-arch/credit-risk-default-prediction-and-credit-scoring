@@ -66,6 +66,27 @@
    - **The PD is not a Basel PD.** `SeriousDlqin2yrs` is a 90+ DPD flag over **2 years**; IRB consumes a **1-year long-run-average** default rate for at least          **5 years**. (CRE 36.81, 36.82)
    - **No LGD and EAD.** The LGDs below correspond to regulatory input floors; EAD is expressed per unit of credit limit, no actual currency.
 
+## Repository layout
+
+The modelling logic lives in `src/`; the notebook is the narrative that calls it
+and shows the results.
+
+| Path | What it holds |
+|---|---|
+| `src/config.py` | Column names, seeds, scorecard scaling, Basel floors, pricing assumptions |
+| `src/data.py` | Loading the CSVs and the stratified train/validation split |
+| `src/cleaning.py` | `CreditDataCleaner` — utilisation cap, debt-ratio fix, sentinel handling |
+| `src/pipelines.py` | The logistic and XGBoost pipelines, plus the tuning search space |
+| `src/evaluation.py` | AUC / Gini / KS, F1 and cost-optimal thresholds, cross-validation |
+| `src/scorecard.py` | Logit decomposition, risk tiers, the points table, review flagging |
+| `src/basel.py` | IRB risk-weight function, supervisory correlations, break-even pricing |
+| `src/plots.py` | Every chart in the notebook |
+| `verify_refactor.py` | Refits the pipelines and checks the headline numbers still hold |
+
+`pipeline_utils.py` remains only as a shim: `logreg_pipeline.joblib` was pickled
+against `pipeline_utils.CreditDataCleaner`, so deleting it would break the saved
+model. New code should import from `src.cleaning`.
+
 ## Setup
 
 ```
@@ -74,4 +95,11 @@ pip install -r requirements.txt
 
 Download `cs-training.csv` and `cs-test.csv` from the [Kaggle competition page](https://www.kaggle.com/c/GiveMeSomeCredit/data) and place them in `data/`.
 
-Then open `credit_default_risk_prediction_+_credit_scoring.ipynb`.
+Then open `credit_default_risk_prediction_+_credit_scoring_+_basel.ipynb`, launching
+Jupyter from the repository root so that `import src` resolves.
+
+To check that the modules still reproduce the reported figures:
+
+```
+python verify_refactor.py
+```

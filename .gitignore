@@ -2,3 +2,16 @@ data/
 .ipynb_checkpoints/
 __pycache__/
 *.pyc
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# local backups
+*.bak
+
+# fitted models and exported frames -- regenerate them, don't version them
+*.joblib
+X_val.csv
+y_val.csv
