@@ -91,6 +91,32 @@ def pd_two_year_to_one_year(pd_2y):
     return 1 - np.sqrt(1 - np.asarray(pd_2y, dtype=float))
 
 
+def fill_zero_utilisation(utilisation, fill=None):
+    """Replace zero utilisation with a stand-in value before pricing.
+
+    Opex is charged per unit of limit but the APR is earned on the drawn
+    balance, so a borrower drawing nothing has no revenue base and no finite
+    break-even APR. Rather than drop those accounts, substitute a utilisation
+    and price them as if they behaved like the median borrower.
+
+    `fill` defaults to the median of the utilisation passed in, zeros included.
+    Pass the training-fold median explicitly if you want the substitution to be
+    a fitted quantity rather than one read off the set being scored.
+
+    Returns the same type it was given, so a Series keeps its index.
+    """
+    values = np.clip(np.asarray(utilisation, dtype=float), 0, 1)
+    fill = float(np.median(values)) if fill is None else float(fill)
+
+    filled = np.where(values == 0, fill, values)
+
+    if hasattr(utilisation, "index"):
+        import pandas as pd
+
+        return pd.Series(filled, index=utilisation.index, name=getattr(utilisation, "name", None))
+    return filled
+
+
 def ead_per_limit(utilisation, ccf=CCF):
     """EAD per unit of credit limit: U + CCF*(1 - U).
 

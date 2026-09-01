@@ -133,7 +133,10 @@ def main():
     results.append(check("1y PD is below 2y PD", float((pd_1y < res['val_proba'].values).mean()), 1.0, 1e-9))
 
     print("\n9. Break-even pricing")
-    util = X_val_imputed["RevolvingUtilizationOfUnsecuredLines"].clip(0, 1)
+    raw_util = X_val_imputed["RevolvingUtilizationOfUnsecuredLines"].clip(0, 1)
+    util = basel.fill_zero_utilisation(raw_util)
+    print(f"  zero-utilisation accounts refilled at the median: {int((raw_util == 0).sum())}")
+
     ead = basel.ead_per_limit(util)
     apr = basel.break_even_apr_by_lgd(basel.floored_pd(pd_1y), ead, util)
     fences = basel.tukey_upper_fence(apr)
@@ -142,6 +145,11 @@ def main():
     print("  decline rate per LGD:")
     for col in apr.columns:
         print(f"    {col}: fence {fences[col]:.2f}%, declined {declines[col]:.1f}%")
+
+    # An APR of inf satisfies any range check, so test finiteness explicitly.
+    n_bad = int((~np.isfinite(apr)).sum().sum())
+    print(f"  [{'ok' if n_bad == 0 else 'FAIL'}] every break-even APR is finite ({n_bad} non-finite)")
+    results.append(n_bad == 0)
     results.append(bool((declines > 0).all() and (declines < 50).all()))
 
     print("\n10. Saved model still loads through the pipeline_utils shim")

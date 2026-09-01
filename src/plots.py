@@ -152,7 +152,7 @@ def apr_decision(apr_frame, thresholds, decline_rates, lgds=LGD_UNSECURED, ax=No
 
     labels = [f"LGD={lgd * 100}%" for lgd in lgds]
     ax.boxplot([apr_frame[c] for c in labels], tick_labels=labels)
-    ax.set_ylim((0, 15))
+    ax.set_ylim((5, 50))
     ax.set_ylabel("break-even APR (%)")
 
     y_top = ax.get_ylim()[1]
