@@ -81,7 +81,6 @@ and shows the results.
 | `src/scorecard.py` | Logit decomposition, risk tiers, the points table, review flagging |
 | `src/basel.py` | IRB risk-weight function, supervisory correlations, break-even pricing |
 | `src/plots.py` | Every chart in the notebook |
-| `verify_refactor.py` | Refits the pipelines and checks the headline numbers still hold |
 
 `pipeline_utils.py` remains only as a shim: `logreg_pipeline.joblib` was pickled
 against `pipeline_utils.CreditDataCleaner`, so deleting it would break the saved
