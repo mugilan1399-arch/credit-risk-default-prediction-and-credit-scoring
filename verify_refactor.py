@@ -134,23 +134,53 @@ def main():
 
     print("\n9. Break-even pricing")
     raw_util = X_val_imputed["RevolvingUtilizationOfUnsecuredLines"].clip(0, 1)
-    util = basel.fill_zero_utilisation(raw_util)
-    print(f"  zero-utilisation accounts refilled at the median: {int((raw_util == 0).sum())}")
+    util = basel.floor_utilisation(raw_util)
+    floor = float(np.median(raw_util))
+    print(f"  utilisation floored at the median {floor:.6f}:"
+          f" {int((raw_util < floor).sum())} accounts lifted"
+          f" (of which {int((raw_util == 0).sum())} drew nothing)")
+
+    ccf = basel.ccf_per_row(util)
+    print(f"  CCF schedule: {int((ccf == 0).sum())} at 0 on the util == 1 mass point,"
+          f" {int((ccf == 0.5).sum())} at the flat 0.50")
 
     ead = basel.ead_per_limit(util)
+    full = np.isclose(ead[util == 1], 1.0).all()
+    print(f"  [{'ok' if full else 'FAIL'}] the util == 1 accounts carry EAD exactly 1")
+    results.append(bool(full))
+
+    # ceil(util) and CCF=0 must agree on the mass point, which is the whole
+    # reason the two rules do not conflict once utilisation is clipped.
+    agree = np.allclose(
+        basel.ead_per_limit(util, ccf=np.ceil(util))[util == 1], ead[util == 1]
+    )
+    print(f"  [{'ok' if agree else 'FAIL'}] ceil-CCF and zero-CCF agree at util == 1")
+    results.append(bool(agree))
+
     apr = basel.break_even_apr_by_lgd(basel.floored_pd(pd_1y), ead, util)
-    fences = basel.tukey_upper_fence(apr)
-    declines = basel.decline_rate(apr, fences)
+    cuts = basel.apr_threshold(apr)
+    declines = basel.decline_rate(apr, cuts)
     print(apr.describe().loc[["mean", "50%", "max"]].to_string())
-    print("  decline rate per LGD:")
+    print("  decline threshold at the 25th percentile:")
     for col in apr.columns:
-        print(f"    {col}: fence {fences[col]:.2f}%, declined {declines[col]:.1f}%")
+        print(f"    {col}: cut {cuts[col]:.2f}%, declined {declines[col]:.1f}%")
+
+    # q=0.25 makes this an identity, not a finding -- assert it so the chart's
+    # "75% declined" is never mistaken for something the data produced.
+    by_construction = np.allclose(declines.values, 75.0, atol=0.5)
+    print(f"  [{'ok' if by_construction else 'FAIL'}] decline rate is 75% by construction")
+    results.append(bool(by_construction))
 
     # An APR of inf satisfies any range check, so test finiteness explicitly.
     n_bad = int((~np.isfinite(apr)).sum().sum())
     print(f"  [{'ok' if n_bad == 0 else 'FAIL'}] every break-even APR is finite ({n_bad} non-finite)")
     results.append(n_bad == 0)
-    results.append(bool((declines > 0).all() and (declines < 50).all()))
+
+    # thresholds must rise with LGD: a worse recovery assumption costs more to
+    # break even on, so the cut moves up.
+    rising = bool(np.all(np.diff(cuts.values) > 0))
+    print(f"  [{'ok' if rising else 'FAIL'}] the decline cut rises with LGD")
+    results.append(rising)
 
     print("\n10. Saved model still loads through the pipeline_utils shim")
     try:

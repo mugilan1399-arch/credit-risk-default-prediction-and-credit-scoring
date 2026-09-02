@@ -145,33 +145,57 @@ def irb_curves(ax=None):
     return ax
 
 
-def apr_decision(apr_frame, thresholds, decline_rates, lgds=LGD_UNSECURED, ax=None):
-    """Break-even APR per LGD assumption, with the decline fence annotated."""
+def apr_decision(apr_frame, threshold, decline_rates=None, lgds=LGD_UNSECURED,
+                 ax=None):
+    """Break-even APR per LGD assumption, with the decline threshold annotated."""
     if ax is None:
         _, ax = plt.subplots(figsize=(10, 6))
 
+    threshold = float(threshold)
+
     labels = [f"LGD={lgd * 100}%" for lgd in lgds]
-    ax.boxplot([apr_frame[c] for c in labels], tick_labels=labels)
-    ax.set_ylim((5, 50))
+
+    ax.boxplot([apr_frame[c] for c in labels], tick_labels=labels, showfliers=False)
+
+    # derive the annotation from the same numbers that position the line
+    rejected = {
+        col: (apr_frame[col] > threshold).sum() / len(apr_frame) * 100
+        for col in labels
+    }
+
+    if decline_rates is not None:
+        for col in labels:
+            if abs(float(decline_rates[col]) - rejected[col]) > 0.05:
+                raise ValueError(
+                    f"decline_rates[{col!r}] = {float(decline_rates[col]):.2f}% but the "
+                    f"thresholds given reject {rejected[col]:.2f}%. The two were computed "
+                    "from different data -- re-run the cell that builds them, and restart "
+                    "the kernel if you have edited src/ since importing it."
+                )
+
+    ax.set_ylim((5, 60))
     ax.set_ylabel("break-even APR (%)")
+    ax.set_title("Break-even APR by LGD assumption, with the rejection threshold")
+    ax.grid(axis="y", alpha=0.25)
 
-    y_top = ax.get_ylim()[1]
-    label_clearance, arrow_len = 0.45, 2
+    # One cut for the whole book: a single dashed rule running from the left of
+    # the first box to the right of the last, labelled with its own value.
+    # Boxplot positions are 1..n, so that span is 0.65 to n + 0.35.
+    ax.hlines(threshold, 0.65, len(labels) + 0.35, colors="crimson",
+              linestyles="--", linewidth=1.3, zorder=5)
 
-    for i, col in enumerate(labels, start=1):
-        thr = min(thresholds[col], y_top - 0.1)
-        text_y = min(thr + 1.6, y_top - (label_clearance + arrow_len + 0.2))
-        x_text = i - 0.05
+    ax.annotate(
+        f"{threshold:.1f}%",
+        xy=(len(labels) + 0.36, threshold),
+        xytext=(len(labels) + 0.42, threshold),
+        ha="left",
+        va="center",
+        fontsize=8.5,
+        color="crimson",
+        fontweight="bold",
+        zorder=6,
+    )
 
-        ax.hlines(thr, i - 0.35, i + 0.35, colors="crimson", linestyles="--",
-                  linewidth=1.2, zorder=5)
-        ax.annotate("", xy=(i - 0.255, thr), xytext=(x_text - 0.205, text_y),
-                    arrowprops=dict(arrowstyle="-|>", color="crimson", lw=1.2), zorder=5)
-        ax.text(x_text, text_y, f"{decline_rates[col]:.1f}% rejected", ha="right",
-                va="bottom", fontsize=9, color="crimson", fontweight="bold", zorder=6)
-
-        tail = text_y + label_clearance
-        ax.annotate("", xy=(x_text - 0.205, tail + arrow_len), xytext=(x_text - 0.205, tail),
-                    arrowprops=dict(arrowstyle="-|>", color="red", lw=1.4), zorder=6)
-
+    # leave room on the right for the label
+    ax.set_xlim(0.5, len(labels) + 1.15)
     return ax

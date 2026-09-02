@@ -91,40 +91,60 @@ def pd_two_year_to_one_year(pd_2y):
     return 1 - np.sqrt(1 - np.asarray(pd_2y, dtype=float))
 
 
-def fill_zero_utilisation(utilisation, fill=None):
-    """Replace zero utilisation with a stand-in value before pricing.
-
-    Opex is charged per unit of limit but the APR is earned on the drawn
-    balance, so a borrower drawing nothing has no revenue base and no finite
-    break-even APR. Rather than drop those accounts, substitute a utilisation
-    and price them as if they behaved like the median borrower.
-
-    `fill` defaults to the median of the utilisation passed in, zeros included.
-    Pass the training-fold median explicitly if you want the substitution to be
-    a fitted quantity rather than one read off the set being scored.
-
-    Returns the same type it was given, so a Series keeps its index.
-    """
-    values = np.clip(np.asarray(utilisation, dtype=float), 0, 1)
-    fill = float(np.median(values)) if fill is None else float(fill)
-
-    filled = np.where(values == 0, fill, values)
-
-    if hasattr(utilisation, "index"):
+def _like(template, values):
+    """Return `values` as a Series on `template`'s index when it has one."""
+    if hasattr(template, "index"):
         import pandas as pd
 
-        return pd.Series(filled, index=utilisation.index, name=getattr(utilisation, "name", None))
-    return filled
+        return pd.Series(values, index=template.index, name=getattr(template, "name", None))
+    return values
 
 
-def ead_per_limit(utilisation, ccf=CCF):
+def floor_utilisation(utilisation, floor=None):
+    """Raise every utilisation below the floor up to it, before pricing.
+
+    Opex is charged per unit of limit but the APR is earned on the drawn
+    balance, so a thin revenue base sends the break-even APR to infinity at
+    zero utilisation and into the thousands of percent just above it. Flooring
+    prices those accounts as if they drew like the median borrower.
+
+    `floor` defaults to the median of the utilisation passed in -- taken before
+    any flooring, so it describes the observed population rather than the
+    adjusted one. Pass the training-fold median explicitly if you want the
+    floor to be a fitted quantity rather than one read off the set being scored.
+
+    Note this is a floor, not a zero-fill: at the median it lifts half the book,
+    not just the accounts drawing nothing.
+    """
+    values = np.maximum(np.asarray(utilisation, dtype=float), 0.0)
+    floor = float(np.median(values)) if floor is None else float(floor)
+    return _like(utilisation, np.maximum(values, floor))
+
+
+def ccf_per_row(utilisation, base_ccf=CCF):
+    """Credit conversion factor per account."""
+    util = np.asarray(utilisation, dtype=float)
+
+    ccf = np.full(util.shape, float(base_ccf))
+    ccf[(util > np.percentile(util, 75) + 1.5 * (np.percentile(util, 75) - np.percentile(util, 25))) & (util < 1)] = 1.0
+    ccf[util == 1] = 0.0
+
+    return _like(utilisation, ccf)
+
+
+def ead_per_limit(utilisation, ccf=None):
     """EAD per unit of credit limit: U + CCF*(1 - U).
 
     With no balances or limits in the data, utilisation is the only handle on
     exposure. Future drawn/limit is assumed to match the observed ratio.
+
+    `ccf` defaults to the per-account schedule in ccf_per_row. Utilisation is
+    NOT clipped at 1 here: over-limit accounts are real, and clipping them away
+    would discard exactly the rows the schedule exists to handle.
     """
-    util = np.clip(np.asarray(utilisation, dtype=float), 0, 1)
-    return util + ccf * (1 - util)
+    util = np.maximum(np.asarray(utilisation, dtype=float), 0.0)
+    factor = ccf_per_row(util) if ccf is None else ccf
+    return _like(utilisation, util + np.asarray(factor, dtype=float) * (1 - util))
 
 
 # --- break-even pricing ------------------------------------------------------
@@ -154,15 +174,35 @@ def break_even_apr_by_lgd(pd_1y, ead, drawn, lgds=LGD_UNSECURED, **kwargs):
     return out
 
 
+DECLINE_QUANTILE = 0.25
+
+
 def tukey_upper_fence(frame):
-    """Q3 + 1.5*IQR -- the same cut matplotlib's boxplot whiskers draw."""
+    """Q3 + 1.5*IQR -- the same cut matplotlib's boxplot whiskers draw.
+
+    No longer the decline rule; kept because the boxplot's y-limits are set
+    from the whisker extents, which is the same calculation.
+    """
     q1, q3 = frame.quantile(0.25), frame.quantile(0.75)
     return q3 + 1.5 * (q3 - q1)
 
 
+def apr_threshold(frame, q=DECLINE_QUANTILE):
+    """Decline anyone whose break-even APR exceeds the q-th percentile.
+
+    The story is that the lender can only charge a competitive rate, so any
+    account needing more than that to break even is turned away.
+
+    Note what q=0.25 implies mechanically: the threshold is the lower quartile,
+    so it lands exactly on the bottom edge of the box in the chart, and the
+    decline rate is 75% by construction rather than by anything in the data.
+    """
+    return frame.quantile(q)
+
+
 def decline_rate(apr_frame, thresholds=None):
-    """Share of borrowers priced above the fence, i.e. declined, per LGD column."""
-    thresholds = tukey_upper_fence(apr_frame) if thresholds is None else thresholds
+    """Share of borrowers priced above the threshold, i.e. declined, per LGD."""
+    thresholds = apr_threshold(apr_frame) if thresholds is None else thresholds
     return (apr_frame[apr_frame > thresholds].count() / len(apr_frame)) * 100
 
 
