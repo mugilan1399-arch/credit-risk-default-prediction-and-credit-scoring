@@ -126,7 +126,7 @@ def ccf_per_row(utilisation, base_ccf=CCF):
     util = np.asarray(utilisation, dtype=float)
 
     ccf = np.full(util.shape, float(base_ccf))
-    ccf[(util > np.percentile(util, 75) + 1.5 * (np.percentile(util, 75) - np.percentile(util, 25))) & (util < 1)] = 1.0
+    ccf[(util > 2 * np.percentile(util, 75) - np.percentile(util, 25)) & (util < 1)] = 1.0
     ccf[util == 1] = 0.0
 
     return _like(utilisation, ccf)
