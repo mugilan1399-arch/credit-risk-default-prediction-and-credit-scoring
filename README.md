@@ -82,10 +82,6 @@ and shows the results.
 | `src/basel.py` | IRB risk-weight function, supervisory correlations, break-even pricing |
 | `src/plots.py` | Every chart in the notebook |
 
-`pipeline_utils.py` remains only as a shim: `logreg_pipeline.joblib` was pickled
-against `pipeline_utils.CreditDataCleaner`, so deleting it would break the saved
-model. New code should import from `src.cleaning`.
-
 ## Setup
 
 ```
