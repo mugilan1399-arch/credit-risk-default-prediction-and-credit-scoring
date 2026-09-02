@@ -77,7 +77,7 @@ and shows the results.
 | `src/data.py` | Loading the CSVs and the stratified train/validation split |
 | `src/cleaning.py` | `CreditDataCleaner` — utilisation cap, debt-ratio fix, sentinel handling |
 | `src/pipelines.py` | The logistic and XGBoost pipelines, plus the tuning search space |
-| `src/evaluation.py` | AUC / Gini / KS, F1 and cost-optimal thresholds, cross-validation |
+| `src/evaluation.py` | AUC / Gini, F1 and cost-optimal thresholds, cross-validation |
 | `src/scorecard.py` | Logit decomposition, risk tiers, the points table, review flagging |
 | `src/basel.py` | IRB risk-weight function, supervisory correlations, break-even pricing |
 | `src/plots.py` | Every chart in the notebook |
