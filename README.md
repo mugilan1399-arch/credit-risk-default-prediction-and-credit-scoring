@@ -92,9 +92,3 @@ Download `cs-training.csv` and `cs-test.csv` from the [Kaggle competition page](
 
 Then open `credit_default_risk_prediction_+_credit_scoring_+_basel.ipynb`, launching
 Jupyter from the repository root so that `import src` resolves.
-
-To check that the modules still reproduce the reported figures:
-
-```
-python verify_refactor.py
-```
