@@ -51,7 +51,7 @@
 **Part 3**
  1. Defined asset correlations, risk-weight function and stated the PD and LGD input floors.
  2. Plotted the 3 curves corresponding to other retail, QRRE and mortgage.
- 3. Derived the approve/decline cutoff by solving for break-even interest rate and taking maximum of the boxplots.
+ 3. Derived the approve/decline cutoff by solving for break-even interest rate and taking the 25th percentile of LGD=30% portfolio.
    
 ## Honest scope / limitations
 
