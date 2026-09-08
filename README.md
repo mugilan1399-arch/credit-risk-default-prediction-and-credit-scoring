@@ -17,7 +17,7 @@
 | Logistic regression (+ late-payment sentinel fix) | **0.854** |
 | Logistic regression (all fixes + Cross-Validation) | **0.849** |
 | XGBoost (after same fixes) | **0.859** |
-| XGBoost (+ Cross-Validation) | **0.859** |
+| XGBoost (+ Cross-Validation) | **0.857** |
 | XGBoost (+ Hyperparamter tuning) | **0.865** |
 
 ## Methodology
